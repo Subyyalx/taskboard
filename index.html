@@ -1,0 +1,367 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#0E1526; --board:#16203A; --board-2:#1D2947; --line:#2A3757;
+    --chalk:#E6EBF5; --dim:#7C89A6;
+    --p1:#E8384F; --p2:#FFB020; --p3:#6FA8DC; --p4:#7C89A6; --clear:#35C08A;
+    --disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+    --body:"Inter",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box}
+  #app{background:var(--ink);color:var(--chalk);font-family:var(--body);padding:18px;border-radius:14px;min-height:560px}
+
+  .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:2px solid var(--line);padding-bottom:10px}
+  .brand{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:.10em;text-transform:uppercase;line-height:1}
+  .brand small{display:block;font-family:var(--body);font-weight:400;font-size:11px;letter-spacing:.14em;color:var(--dim);margin-top:6px}
+  .clock{font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:.06em;color:var(--dim);text-align:right;line-height:1}
+  .clock b{display:block;font-family:var(--body);font-weight:500;font-size:11px;letter-spacing:.12em;color:var(--dim);margin-top:6px}
+
+  .bite{margin-top:14px;background:var(--board);border-left:6px solid var(--p2);border-radius:0 10px 10px 0;padding:14px 16px}
+  .bite.late{border-left-color:var(--p1)}
+  .bite .eyebrow{font-size:10px;letter-spacing:.20em;text-transform:uppercase;color:var(--dim)}
+  .bite .what{font-family:var(--disp);font-weight:600;font-size:27px;line-height:1.1;margin:6px 0 8px}
+  .biterow{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .tick{font-family:var(--disp);font-weight:700;font-size:40px;letter-spacing:.03em;color:var(--p2);line-height:1;font-variant-numeric:tabular-nums}
+  .bite.late .tick{color:var(--p1)}
+  .when{font-size:12px;color:var(--dim)}
+
+  .add{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .add input[type=text]{flex:1 1 220px;min-width:0;background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:11px 12px;border-radius:8px;font:inherit;font-size:14px}
+  .add input[type=date]{background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:9px 10px;border-radius:8px;font:inherit;font-size:13px;color-scheme:dark}
+  .add input::placeholder{color:var(--dim)}
+  .chip{background:transparent;border:1px solid var(--line);color:var(--dim);padding:8px 11px;border-radius:20px;font:inherit;font-size:12px;cursor:pointer}
+  .chip:hover{border-color:var(--chalk);color:var(--chalk)}
+  .chip.on{border-color:var(--p2);color:var(--p2)}
+  .pchip.on[data-p="1"]{border-color:var(--p1);color:var(--p1)}
+  .pchip.on[data-p="2"]{border-color:var(--p2);color:var(--p2)}
+  .pchip.on[data-p="3"]{border-color:var(--p3);color:var(--p3)}
+  .pchip.on[data-p="4"]{border-color:var(--chalk);color:var(--chalk)}
+  .go{background:var(--chalk);color:var(--ink);border:0;padding:11px 20px;border-radius:8px;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+  .go:hover{background:#fff}
+  .sep{width:1px;height:22px;background:var(--line)}
+
+  .wipnote{margin-top:10px;font-size:11.5px;color:var(--dim)}
+
+  .group{margin-top:22px}
+  .ghead{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+  .ghead .rule{flex:1;height:1px;background:var(--line)}
+  .ghead .n{font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:0;color:var(--dim)}
+  .group.danger .ghead{color:var(--p1)}
+  .group.live .ghead{color:var(--clear)}
+
+  .row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-top:7px;background:var(--board);border-radius:9px;border-left:3px solid transparent}
+  .row.late{border-left-color:var(--p1);background:#231628}
+  .row.now{border-left-color:var(--p2)}
+  .row.doing{border-left-color:var(--clear);background:#132A2B}
+  .row.hold{opacity:.7;border-left-color:var(--dim)}
+  .row.gone{opacity:.42;background:transparent}
+  .p{font-family:var(--disp);font-weight:700;font-size:12px;letter-spacing:.06em;border:1px solid;border-radius:4px;padding:2px 5px;flex-shrink:0}
+  .p1{color:var(--p1);border-color:var(--p1)}
+  .p2{color:var(--p2);border-color:var(--p2)}
+  .p3{color:var(--p3);border-color:var(--p3)}
+  .p4{color:var(--p4);border-color:var(--p4)}
+  .t{flex:1;min-width:0;font-size:14.5px;line-height:1.35;word-break:break-word}
+  .row.gone .t{text-decoration:line-through}
+  .cd{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .row.late .cd{color:var(--p1)}
+  .row.now .cd{color:var(--p2)}
+  .acts{display:flex;gap:5px;flex-shrink:0}
+  .mini{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:5px 8px;font:inherit;font-size:11px;cursor:pointer;line-height:1.2}
+  .mini:hover{border-color:var(--chalk);color:var(--chalk)}
+  .mini.ok:hover{border-color:var(--clear);color:var(--clear)}
+
+  .empty{margin-top:10px;padding:26px 18px;border:1px dashed var(--line);border-radius:10px;text-align:center;color:var(--dim);font-size:13.5px}
+
+  .donetoggle{margin-top:18px;text-align:center}
+
+  .ledger{margin-top:26px;background:var(--board);border-radius:11px;padding:16px}
+  .ledger h3{margin:0 0 3px;font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.10em;text-transform:uppercase}
+  .ledger .sub{font-size:11.5px;color:var(--dim);margin-bottom:14px}
+  .stats{display:flex;gap:22px;flex-wrap:wrap}
+  .stat{min-width:78px}
+  .stat u{display:block;font-family:var(--disp);font-weight:700;font-size:30px;line-height:1;text-decoration:none;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10.5px;color:var(--dim);margin-top:5px;letter-spacing:.04em}
+  .ledger .go{margin-top:15px;font-size:12px;padding:9px 15px}
+  #copied{font-size:11.5px;color:var(--clear);margin-left:10px}
+
+  .foot{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+
+  @keyframes breathe{0%,100%{box-shadow:inset 3px 0 0 var(--p1)}50%{box-shadow:inset 3px 0 0 rgba(232,56,79,.25)}}
+  .row.late{animation:breathe 2.4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){.row.late{animation:none}}
+  @media (max-width:540px){
+    .brand{font-size:24px}.clock{font-size:20px}.tick{font-size:32px}.bite .what{font-size:22px}
+    .row{flex-wrap:wrap}.cd{order:3}.acts{order:4;margin-left:auto}.sep{display:none}
+  }
+  :focus-visible{outline:2px solid var(--p2);outline-offset:2px}
+</style>
+
+<div id="app">
+  <div class="top">
+    <div class="brand">Task Board<small id="sub">Loading your board…</small></div>
+    <div class="clock" id="clock">--:--:--<b id="today">—</b></div>
+  </div>
+
+  <div id="bitewrap"></div>
+
+  <div class="add">
+    <input type="text" id="title" placeholder="What has to get done?" autocomplete="off">
+    <button class="chip pchip" data-p="1">P1</button>
+    <button class="chip pchip" data-p="2">P2</button>
+    <button class="chip pchip on" data-p="3">P3</button>
+    <button class="chip pchip" data-p="4">P4</button>
+    <span class="sep"></span>
+    <button class="chip" data-off="0">Today</button>
+    <button class="chip" data-off="1">Tomorrow</button>
+    <input type="date" id="date">
+    <button class="go" id="go">Add</button>
+  </div>
+  <div class="wipnote" id="wipnote"></div>
+
+  <div id="list"></div>
+  <div id="ledger"></div>
+
+  <div class="foot">
+    <button class="mini" id="int">Log interrupt</button>
+    <button class="mini" id="bk">Back up / restore</button>
+    <button class="mini" id="wipe">Clear all data</button>
+  </div>
+  <div id="backup"></div>
+</div>
+
+<script>
+const KEY='taskboard:v2';
+let S={tasks:[],interrupts:[],lastOpen:null};
+let pDue=null, pPri=3, showDone=false;
+const WEEK=7*864e5;
+
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO=()=>iso(new Date());
+const offISO=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+const dl=s=>new Date(s+'T23:59:59');
+const fmt=s=>dl(s).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const isLate=t=>t.due&&dl(t.due)<new Date();
+
+async function load(){
+  try{const r=await window.storage.get(KEY);if(r&&r.value)S=Object.assign(S,JSON.parse(r.value));}catch(e){}
+  const prev=S.lastOpen;S.lastOpen=new Date().toISOString();save();
+  $('#sub').textContent=prev?'Last opened '+ago(prev):'New board — add the ticket you are most likely to lose';
+  render();
+}
+async function save(){try{await window.storage.set(KEY,JSON.stringify(S))}catch(e){}}
+function ago(s){const h=(Date.now()-new Date(s))/36e5;if(h<1)return'a few minutes ago';if(h<24)return Math.round(h)+'h ago';const d=Math.round(h/24);return d+(d===1?' day ago':' days ago')}
+
+function left(s){
+  const ms=dl(s)-Date.now(),a=Math.abs(ms);
+  const d=Math.floor(a/864e5),h=Math.floor(a%864e5/36e5),m=Math.floor(a%36e5/6e4);
+  if(ms<0){const o=Math.max(1,Math.ceil(a/864e5));return{txt:o+(o===1?' day late':' days late'),st:'late'}}
+  if(d===0&&h<12)return{txt:h+'h '+pad(m)+'m left',st:'now'};
+  if(d===0)return{txt:'due today',st:'now'};
+  if(d===1)return{txt:'1 day left',st:'soon'};
+  return{txt:d+' days left',st:d<=7?'soon':'far'};
+}
+const rank=(a,b)=>(a.p||3)-(b.p||3)||(a.due||'9999').localeCompare(b.due||'9999');
+
+function add(){
+  const v=$('#title').value.trim();if(!v)return;
+  S.tasks.push({id:Date.now()+''+Math.random(),title:v,due:pDue,p:pPri,status:'open',created:Date.now()});
+  $('#title').value='';$('#date').value='';pDue=null;
+  document.querySelectorAll('.chip[data-off]').forEach(c=>c.classList.remove('on'));
+  save();render();$('#title').focus();
+}
+function act(id,how){
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  if(how==='del')S.tasks=S.tasks.filter(x=>x.id!==id);
+  else if(how==='done'){t.status='done';t.doneAt=Date.now()}
+  else if(how==='open'){t.status='open';delete t.doneAt}
+  else if(how==='start')t.status='doing';
+  else if(how==='park')t.status='open';
+  else if(how==='hold')t.status=t.status==='waiting'?'open':'waiting';
+  else if(how==='push')t.due=offISO(1);
+  save();render();
+}
+function bump(){S.interrupts.push(Date.now());save();render()}
+
+function row(t){
+  const L=t.due?left(t.due):null;
+  let cls='';
+  if(t.status==='done')cls='gone';else if(t.status==='doing')cls='doing';
+  else if(t.status==='waiting')cls='hold';else if(L&&(L.st==='late'||L.st==='now'))cls=L.st;
+  const p=t.p||3;
+  return '<div class="row '+cls+'">'
+   +'<span class="p p'+p+'">P'+p+'</span>'
+   +'<span class="t">'+esc(t.title)+'</span>'
+   +'<span class="cd">'+(t.status==='done'?'cleared':t.status==='waiting'?'on hold':L?L.txt:'no date')+'</span>'
+   +'<span class="acts">'
+   +(t.status==='done'
+      ?'<button class="mini" data-a="open" data-i="'+t.id+'">Reopen</button>'
+      :'<button class="mini ok" data-a="done" data-i="'+t.id+'">Done</button>'
+       +(t.status==='doing'?'<button class="mini" data-a="park" data-i="'+t.id+'">Park</button>'
+                           :'<button class="mini" data-a="start" data-i="'+t.id+'">Start</button>')
+       +'<button class="mini" data-a="hold" data-i="'+t.id+'">'+(t.status==='waiting'?'Resume':'Hold')+'</button>'
+       +(t.due?'<button class="mini" data-a="push" data-i="'+t.id+'">+1d</button>':''))
+   +'<button class="mini" data-a="del" data-i="'+t.id+'">&#10005;</button>'
+   +'</span>'
+   +(t.due&&t.status!=='done'?'<span class="when" style="flex-basis:100%;font-size:11px">'+fmt(t.due)+'</span>':'')
+   +'</div>';
+}
+function group(name,items,mod){
+  if(!items.length)return'';
+  return '<div class="group '+(mod||'')+'"><div class="ghead"><span>'+name+'</span><span class="n">'+items.length+'</span><span class="rule"></span></div>'+items.map(row).join('')+'</div>';
+}
+
+function render(){
+  const T=S.tasks;
+  const doing=T.filter(t=>t.status==='doing').sort(rank);
+  const open=T.filter(t=>t.status==='open');
+  const late=open.filter(isLate).sort(rank);
+  const now=open.filter(t=>!isLate(t)&&t.due===todayISO()).sort(rank);
+  const week=open.filter(t=>t.due&&!isLate(t)&&t.due!==todayISO()&&dl(t.due)-Date.now()<=WEEK).sort(rank);
+  const later=open.filter(t=>!t.due||(!isLate(t)&&t.due!==todayISO()&&dl(t.due)-Date.now()>WEEK)).sort(rank);
+  const hold=T.filter(t=>t.status==='waiting').sort(rank);
+  const done=T.filter(t=>t.status==='done').sort((a,b)=>b.doneAt-a.doneAt).slice(0,8);
+
+  const queue=[...doing,...late,...now,...week,...later];
+  const next=queue.find(t=>t.due);
+  $('#bitewrap').innerHTML=next
+    ?'<div class="bite '+(isLate(next)?'late':'')+'"><div class="eyebrow">'+(isLate(next)?'This one is already burning':'Next thing that will bite you')
+      +'</div><div class="what">'+esc(next.title)+'</div><div class="biterow"><span class="tick">'+left(next.due).txt.toUpperCase()
+      +'</span><span class="when">P'+(next.p||3)+' &middot; '+fmt(next.due)+'</span></div></div>':'';
+
+  $('#wipnote').textContent=doing.length?doing.length+' in progress now.':'';
+
+  const body=group('In progress',doing,'live')+group('Overdue',late,'danger')+group('Due today',now)
+    +group('This week',week)+group('Later',later)+group('On hold',hold);
+  const doneSection=done.length
+    ?'<div class="donetoggle"><button class="chip" id="dt">'+(showDone?'Hide cleared':'Show cleared ('+done.length+')')+'</button></div>'
+      +(showDone?group('Recently cleared',done):'')
+    :'';
+  $('#list').innerHTML=(body||'<div class="empty">Nothing on the board.<br>Add the ticket you are most afraid of forgetting first.</div>')+doneSection;
+
+  ledger();
+}
+
+function stats(){
+  const cut=Date.now()-WEEK;
+  const added=S.tasks.filter(t=>t.created>=cut).length;
+  const cleared=S.tasks.filter(t=>t.status==='done'&&t.doneAt>=cut);
+  const ints=S.interrupts.filter(x=>x>=cut).length;
+  const intsToday=S.interrupts.filter(x=>{const d=new Date();d.setHours(0,0,0,0);return x>=d}).length;
+  const overdue=S.tasks.filter(t=>t.status!=='done'&&isLate(t));
+  return{added,cleared:cleared.length,p1:cleared.filter(t=>(t.p||3)===1).length,
+         ints,intsToday,overdue,
+         from:new Date(cut).toLocaleDateString(undefined,{day:'numeric',month:'short'}),
+         to:new Date().toLocaleDateString(undefined,{day:'numeric',month:'short'})};
+}
+function ledger(){
+  const s=stats();
+  $('#int').textContent='Log interrupt'+(s.intsToday?' ('+s.intsToday+' today)':'');
+  $('#ledger').innerHTML='<div class="ledger"><h3>This week</h3><div class="sub">'+s.from+' &ndash; '+s.to+'</div>'
+   +'<div class="stats">'
+   +'<div class="stat"><u>'+s.added+'</u><span>TICKETS IN</span></div>'
+   +'<div class="stat"><u style="color:var(--clear)">'+s.cleared+'</u><span>CLEARED</span></div>'
+   +'<div class="stat"><u style="color:var(--p2)">'+s.ints+'</u><span>INTERRUPTS</span></div>'
+   +'<div class="stat"><u style="color:'+(s.overdue.length?'var(--p1)':'var(--dim)')+'">'+s.overdue.length+'</u><span>STILL SLIPPED</span></div>'
+   +'</div><button class="go" id="cp">Copy summary for your manager</button><span id="copied"></span></div>';
+}
+function ledgerText(){
+  const s=stats();
+  let out='Ticket summary, '+s.from+' - '+s.to+'\n'
+   +'Tickets in: '+s.added+'\n'
+   +'Tickets cleared: '+s.cleared+'\n'
+   +'P1 incidents handled: '+s.p1+'\n'
+   +'Interrupts logged: '+s.ints+'\n'
+   +'Still past due: '+s.overdue.length+'\n';
+  if(s.overdue.length){
+    out+='\nWhat slipped and why it was outranked:\n';
+    s.overdue.sort(rank).slice(0,5).forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+' (due '+t.due+')\n'});
+  }
+  return out;
+}
+
+setInterval(()=>{
+  const d=new Date();
+  $('#clock').firstChild.textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+  $('#today').textContent=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+},1000);
+setInterval(render,30000);
+
+$('#go').onclick=add;
+$('#title').addEventListener('keydown',e=>{if(e.key==='Enter')add()});
+document.querySelectorAll('.pchip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.pchip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');pPri=+c.dataset.p;
+});
+document.querySelectorAll('.chip[data-off]').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.chip[data-off]').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on');pDue=offISO(+c.dataset.off);$('#date').value=pDue;
+});
+$('#date').onchange=e=>{pDue=e.target.value||null;document.querySelectorAll('.chip[data-off]').forEach(x=>x.classList.remove('on'))};
+$('#list').onclick=e=>{
+  const dt=e.target.closest('#dt');if(dt){showDone=!showDone;render();return}
+  const b=e.target.closest('.mini');if(b)act(b.dataset.i,b.dataset.a);
+};
+$('#int').onclick=bump;
+$('#ledger').onclick=async e=>{
+  if(e.target.id!=='cp')return;
+  const txt=ledgerText();
+  try{await navigator.clipboard.writeText(txt);$('#copied').textContent='Copied.'}
+  catch(err){
+    const ta=document.createElement('textarea');ta.value=txt;
+    ta.style.cssText='width:100%;margin-top:12px;height:150px;background:var(--board-2);color:var(--chalk);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px var(--body)';
+    e.target.parentNode.appendChild(ta);ta.select();$('#copied').textContent='Select and copy.';
+  }
+};
+let bkOpen=false;
+function backupPanel(){
+  if(!bkOpen){$('#backup').innerHTML='';return}
+  $('#backup').innerHTML='<div class="ledger"><h3>Back up and restore</h3>'
+   +'<div class="sub">Everything below is your whole board as text. Keep a copy somewhere you control.</div>'
+   +'<textarea id="bkta" spellcheck="false" style="width:100%;height:120px;background:var(--board-2);color:var(--chalk);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px var(--mono,monospace);resize:vertical"></textarea>'
+   +'<div class="barg" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+   +'<button class="chip" id="bkcopy">Copy to clipboard</button>'
+   +'<button class="chip" id="bkfile">Download as file</button>'
+   +'<button class="chip" id="bkrestore">Restore from this text</button>'
+   +'<span id="bkmsg" style="font-size:11.5px;color:var(--clear)"></span>'
+   +'</div></div>';
+  $('#bkta').value=JSON.stringify(S,null,1);
+}
+$('#bk').onclick=()=>{bkOpen=!bkOpen;backupPanel()};
+$('#backup').onclick=async e=>{
+  const id=e.target.id, msg=()=>$('#bkmsg');
+  if(id==='bkcopy'){
+    try{await navigator.clipboard.writeText($('#bkta').value);msg().textContent='Copied.'}
+    catch(err){$('#bkta').select();msg().textContent='Press Ctrl+C now.'}
+  }
+  if(id==='bkfile'){
+    try{
+      const b=new Blob([$('#bkta').value],{type:'application/json'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(b);a.download='task-board-'+todayISO()+'.json';
+      document.body.appendChild(a);a.click();a.remove();
+      msg().textContent='Saved to your downloads.';
+    }catch(err){msg().textContent='Download blocked here — use Copy instead.'}
+  }
+  if(id==='bkrestore'){
+    try{
+      const d=JSON.parse($('#bkta').value);
+      if(!Array.isArray(d.tasks))throw 0;
+      S={tasks:d.tasks,interrupts:d.interrupts||[],lastOpen:new Date().toISOString()};
+      await save();render();msg().textContent='Restored '+d.tasks.length+' tickets.';
+    }catch(err){msg().textContent='That text is not a valid backup. Nothing was changed.'}
+  }
+};
+$('#wipe').onclick=async()=>{
+  if(!confirm('Delete every ticket and interrupt on this board? Back up first if you want a copy.'))return;
+  S={tasks:[],interrupts:[],lastOpen:new Date().toISOString()};await save();render();
+};
+
+load();
+</script>
