@@ -1,11 +1,11 @@
-<meta name="viewport" content="width=device-width, initial-scale=1"> 
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
 <style>
   :root{
-    --ink:#0E1526; --board:#16203A; --board-2:#1D2947; --line:#2A3757; 
+    --ink:#0E1526; --board:#16203A; --board-2:#1D2947; --line:#2A3757;
     --chalk:#E6EBF5; --dim:#7C89A6;
     --p1:#E8384F; --p2:#FFB020; --p3:#6FA8DC; --p4:#7C89A6; --clear:#35C08A;
     --disp:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
@@ -53,7 +53,7 @@
   .group.danger .ghead{color:var(--p1)}
   .group.live .ghead{color:var(--clear)}
 
-  .row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-top:7px;background:var(--board);border-radius:9px;border-left:3px solid transparent}
+  .row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-top:7px;background:var(--board);border-radius:9px;border-left:3px solid transparent;flex-wrap:wrap}
   .row.late{border-left-color:var(--p1);background:#231628}
   .row.now{border-left-color:var(--p2)}
   .row.doing{border-left-color:var(--clear);background:#132A2B}
@@ -64,8 +64,11 @@
   .p2{color:var(--p2);border-color:var(--p2)}
   .p3{color:var(--p3);border-color:var(--p3)}
   .p4{color:var(--p4);border-color:var(--p4)}
-  .t{flex:1;min-width:0;font-size:14.5px;line-height:1.35;word-break:break-word}
-  .row.gone .t{text-decoration:line-through}
+  .t{flex:1 1 160px;min-width:160px;font-size:14.5px;line-height:1.35;word-break:break-word;cursor:text;border-radius:5px;padding:2px 4px;margin:-2px -4px}
+  .t:hover{background:rgba(255,255,255,.05)}
+  .row.gone .t{text-decoration:line-through;cursor:default}
+  .row.gone .t:hover{background:none}
+  .editin{flex:1 1 160px;min-width:160px;background:var(--board-2);border:1px solid var(--p2);color:var(--chalk);padding:3px 7px;border-radius:5px;font:inherit;font-size:14.5px}
   .cd{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
   .row.late .cd{color:var(--p1)}
   .row.now .cd{color:var(--p2)}
@@ -136,7 +139,7 @@
 <script>
 const KEY='taskboard:v2';
 let S={tasks:[],interrupts:[],lastOpen:null};
-let pDue=null, pPri=3, showDone=false;
+let pDue=null, pPri=3, showDone=false, editingId=null;
 const WEEK=7*864e5;
 
 const $=s=>document.querySelector(s);
@@ -195,11 +198,15 @@ function row(t){
   if(t.status==='done')cls='gone';else if(t.status==='doing')cls='doing';
   else if(t.status==='waiting')cls='hold';else if(L&&(L.st==='late'||L.st==='now'))cls=L.st;
   const p=t.p||3;
+  const editing=t.id===editingId;
   return '<div class="row '+cls+'">'
    +'<span class="p p'+p+'">P'+p+'</span>'
-   +'<span class="t">'+esc(t.title)+'</span>'
+   +(editing
+      ?'<input type="text" class="editin" data-i="'+t.id+'" value="'+esc(t.title)+'">'
+      :'<span class="t" data-i="'+t.id+'" title="Click to edit">'+esc(t.title)+'</span>')
    +'<span class="cd">'+(t.status==='done'?'cleared':t.status==='waiting'?'on hold':L?L.txt:'no date')+'</span>'
    +'<span class="acts">'
+   +(t.status!=='done'?'<button class="mini" data-a="edit" data-i="'+t.id+'">Edit</button>':'')
    +(t.status==='done'
       ?'<button class="mini" data-a="open" data-i="'+t.id+'">Reopen</button>'
       :'<button class="mini ok" data-a="done" data-i="'+t.id+'">Done</button>'
@@ -244,8 +251,14 @@ function render(){
       +(showDone?group('Recently cleared',done):'')
     :'';
   $('#list').innerHTML=(body||'<div class="empty">Nothing on the board.<br>Add the ticket you are most afraid of forgetting first.</div>')+doneSection;
+  if(editingId){const el=$('.editin');if(el){el.focus();el.select();}}
 
   ledger();
+}
+function renameTask(id,val){
+  const v=val.trim();
+  if(v){const t=S.tasks.find(x=>x.id===id);if(t){t.title=v;save();}}
+  editingId=null;render();
 }
 
 function stats(){
@@ -291,7 +304,7 @@ setInterval(()=>{
   $('#clock').firstChild.textContent=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
   $('#today').textContent=d.toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'}).toUpperCase();
 },1000);
-setInterval(render,30000);
+setInterval(()=>{if(!editingId)render();},30000);
 
 $('#go').onclick=add;
 $('#title').addEventListener('keydown',e=>{if(e.key==='Enter')add()});
@@ -306,8 +319,19 @@ document.querySelectorAll('.chip[data-off]').forEach(c=>c.onclick=()=>{
 $('#date').onchange=e=>{pDue=e.target.value||null;document.querySelectorAll('.chip[data-off]').forEach(x=>x.classList.remove('on'))};
 $('#list').onclick=e=>{
   const dt=e.target.closest('#dt');if(dt){showDone=!showDone;render();return}
+  const edit=e.target.closest('[data-a="edit"]');if(edit){editingId=edit.dataset.i;render();return}
+  const tEl=e.target.closest('.t');if(tEl){editingId=tEl.dataset.i;render();return}
   const b=e.target.closest('.mini');if(b)act(b.dataset.i,b.dataset.a);
 };
+$('#list').addEventListener('keydown',e=>{
+  if(!e.target.classList.contains('editin'))return;
+  if(e.key==='Enter')e.target.blur();
+  else if(e.key==='Escape'){editingId=null;render();}
+});
+$('#list').addEventListener('focusout',e=>{
+  if(!e.target.classList.contains('editin'))return;
+  renameTask(e.target.dataset.i,e.target.value);
+});
 $('#int').onclick=bump;
 $('#ledger').onclick=async e=>{
   if(e.target.id!=='cp')return;
