@@ -297,11 +297,11 @@ function cancelEdit(){editingId=null;editDraft=null;render();}
 function stats(){
   const cut=Date.now()-WEEK;
   const added=S.tasks.filter(t=>t.created>=cut).length;
-  const cleared=S.tasks.filter(t=>t.status==='done'&&t.doneAt>=cut);
+  const cleared=S.tasks.filter(t=>t.status==='done'&&t.doneAt>=cut).sort((a,b)=>b.doneAt-a.doneAt);
   const ints=S.interrupts.filter(x=>x>=cut).length;
   const intsToday=S.interrupts.filter(x=>{const d=new Date();d.setHours(0,0,0,0);return x>=d}).length;
-  const overdue=S.tasks.filter(t=>t.status!=='done'&&isLate(t));
-  return{added,cleared:cleared.length,p1:cleared.filter(t=>(t.p||3)===1).length,
+  const overdue=S.tasks.filter(t=>t.status!=='done'&&isLate(t)).sort(rank);
+  return{added,clearedList:cleared,cleared:cleared.length,p1:cleared.filter(t=>(t.p||3)===1).length,
          ints,intsToday,overdue,
          from:new Date(cut).toLocaleDateString(undefined,{day:'numeric',month:'short'}),
          to:new Date().toLocaleDateString(undefined,{day:'numeric',month:'short'})};
@@ -325,9 +325,13 @@ function ledgerText(){
    +'P1 incidents handled: '+s.p1+'\n'
    +'Interrupts logged: '+s.ints+'\n'
    +'Still past due: '+s.overdue.length+'\n';
+  if(s.clearedList.length){
+    out+='\nCleared this week:\n';
+    s.clearedList.forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+'\n'});
+  }
   if(s.overdue.length){
-    out+='\nWhat slipped and why it was outranked:\n';
-    s.overdue.sort(rank).slice(0,5).forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+' (due '+t.due+')\n'});
+    out+='\nStill open, past due:\n';
+    s.overdue.forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+' (due '+t.due+')\n'});
   }
   return out;
 }
