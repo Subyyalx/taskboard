@@ -153,12 +153,22 @@ const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&qu
 const isLate=t=>t.due&&dl(t.due)<new Date();
 
 async function load(){
-  try{const r=await window.storage.get(KEY);if(r&&r.value)S=Object.assign(S,JSON.parse(r.value));}catch(e){}
+  try{
+    let raw=null;
+    if(window.storage&&window.storage.get){const r=await window.storage.get(KEY);raw=r&&r.value}
+    else raw=localStorage.getItem(KEY);
+    if(raw)S=Object.assign(S,JSON.parse(raw));
+  }catch(e){}
   const prev=S.lastOpen;S.lastOpen=new Date().toISOString();save();
   $('#sub').textContent=prev?'Last opened '+ago(prev):'New board — add the ticket you are most likely to lose';
   render();
 }
-async function save(){try{await window.storage.set(KEY,JSON.stringify(S))}catch(e){}}
+async function save(){
+  try{
+    if(window.storage&&window.storage.set)await window.storage.set(KEY,JSON.stringify(S));
+    else localStorage.setItem(KEY,JSON.stringify(S));
+  }catch(e){}
+}
 function ago(s){const h=(Date.now()-new Date(s))/36e5;if(h<1)return'a few minutes ago';if(h<24)return Math.round(h)+'h ago';const d=Math.round(h/24);return d+(d===1?' day ago':' days ago')}
 
 function left(s){
