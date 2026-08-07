@@ -68,7 +68,12 @@
   .t:hover{background:rgba(255,255,255,.05)}
   .row.gone .t{text-decoration:line-through;cursor:default}
   .row.gone .t:hover{background:none}
-  .editin{flex:1 1 160px;min-width:160px;background:var(--board-2);border:1px solid var(--p2);color:var(--chalk);padding:3px 7px;border-radius:5px;font:inherit;font-size:14.5px}
+  .editin{flex:1 1 100%;min-width:160px;background:var(--board-2);border:1px solid var(--p2);color:var(--chalk);padding:3px 7px;border-radius:5px;font:inherit;font-size:14.5px}
+  .row.editing{align-items:center}
+  .editpr{display:flex;gap:5px}
+  .row.editing input[type=date]{background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:6px 8px;border-radius:6px;font:inherit;font-size:12.5px;color-scheme:dark}
+  .editacts{display:flex;gap:6px;margin-left:auto}
+  .editacts .go{padding:7px 14px;font-size:12px}
   .cd{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.04em;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
   .row.late .cd{color:var(--p1)}
   .row.now .cd{color:var(--p2)}
@@ -139,7 +144,7 @@
 <script>
 const KEY='taskboard:v2';
 let S={tasks:[],interrupts:[],lastOpen:null};
-let pDue=null, pPri=3, showDone=false, editingId=null;
+let pDue=null, pPri=3, showDone=false, editingId=null, editDraft=null;
 const WEEK=7*864e5;
 
 const $=s=>document.querySelector(s);
@@ -208,12 +213,22 @@ function row(t){
   if(t.status==='done')cls='gone';else if(t.status==='doing')cls='doing';
   else if(t.status==='waiting')cls='hold';else if(L&&(L.st==='late'||L.st==='now'))cls=L.st;
   const p=t.p||3;
-  const editing=t.id===editingId;
+  if(t.id===editingId){
+    const d=editDraft;
+    return '<div class="row editing">'
+     +'<input type="text" class="editin" data-i="'+t.id+'" value="'+esc(d.title)+'" placeholder="Title">'
+     +'<span class="editpr">'+[1,2,3,4].map(n=>'<button class="chip pchip'+(d.p===n?' on':'')+'" data-a="editp" data-p="'+n+'" data-i="'+t.id+'">P'+n+'</button>').join('')+'</span>'
+     +'<input type="date" class="editdate" data-i="'+t.id+'" value="'+(d.due||'')+'">'
+     +(d.due?'<button class="mini" data-a="editnodate" data-i="'+t.id+'">No date</button>':'')
+     +'<span class="editacts">'
+       +'<button class="go" data-a="savedit" data-i="'+t.id+'">Save</button>'
+       +'<button class="mini" data-a="canceledit" data-i="'+t.id+'">Cancel</button>'
+     +'</span>'
+     +'</div>';
+  }
   return '<div class="row '+cls+'">'
    +'<span class="p p'+p+'">P'+p+'</span>'
-   +(editing
-      ?'<input type="text" class="editin" data-i="'+t.id+'" value="'+esc(t.title)+'">'
-      :'<span class="t" data-i="'+t.id+'" title="Click to edit">'+esc(t.title)+'</span>')
+   +'<span class="t" data-i="'+t.id+'" title="Click to edit">'+esc(t.title)+'</span>'
    +'<span class="cd">'+(t.status==='done'?'cleared':t.status==='waiting'?'on hold':L?L.txt:'no date')+'</span>'
    +'<span class="acts">'
    +(t.status!=='done'?'<button class="mini" data-a="edit" data-i="'+t.id+'">Edit</button>':'')
@@ -261,15 +276,23 @@ function render(){
       +(showDone?group('Recently cleared',done):'')
     :'';
   $('#list').innerHTML=(body||'<div class="empty">Nothing on the board.<br>Add the ticket you are most afraid of forgetting first.</div>')+doneSection;
-  if(editingId){const el=$('.editin');if(el){el.focus();el.select();}}
+  if(editingId){const el=$('.editin');if(el&&document.activeElement!==el){el.focus();el.select();}}
 
   ledger();
 }
-function renameTask(id,val){
-  const v=val.trim();
-  if(v){const t=S.tasks.find(x=>x.id===id);if(t){t.title=v;save();}}
-  editingId=null;render();
+function startEdit(id){
+  const t=S.tasks.find(x=>x.id===id);if(!t)return;
+  editingId=id;editDraft={title:t.title,p:t.p||3,due:t.due||null};render();
 }
+function saveEdit(id){
+  const t=S.tasks.find(x=>x.id===id);if(!t||!editDraft)return;
+  const v=(editDraft.title||'').trim();
+  if(v)t.title=v;
+  t.p=editDraft.p;
+  t.due=editDraft.due||null;
+  editingId=null;editDraft=null;save();render();
+}
+function cancelEdit(){editingId=null;editDraft=null;render();}
 
 function stats(){
   const cut=Date.now()-WEEK;
@@ -329,18 +352,23 @@ document.querySelectorAll('.chip[data-off]').forEach(c=>c.onclick=()=>{
 $('#date').onchange=e=>{pDue=e.target.value||null;document.querySelectorAll('.chip[data-off]').forEach(x=>x.classList.remove('on'))};
 $('#list').onclick=e=>{
   const dt=e.target.closest('#dt');if(dt){showDone=!showDone;render();return}
-  const edit=e.target.closest('[data-a="edit"]');if(edit){editingId=edit.dataset.i;render();return}
-  const tEl=e.target.closest('.t');if(tEl){editingId=tEl.dataset.i;render();return}
+  const editBtn=e.target.closest('[data-a="edit"]');if(editBtn){startEdit(editBtn.dataset.i);return}
+  const tEl=e.target.closest('.t');if(tEl){startEdit(tEl.dataset.i);return}
+  const pBtn=e.target.closest('[data-a="editp"]');if(pBtn){editDraft.p=+pBtn.dataset.p;render();return}
+  const noDate=e.target.closest('[data-a="editnodate"]');if(noDate){editDraft.due=null;render();return}
+  const sv=e.target.closest('[data-a="savedit"]');if(sv){saveEdit(sv.dataset.i);return}
+  const cn=e.target.closest('[data-a="canceledit"]');if(cn){cancelEdit();return}
   const b=e.target.closest('.mini');if(b)act(b.dataset.i,b.dataset.a);
 };
-$('#list').addEventListener('keydown',e=>{
-  if(!e.target.classList.contains('editin'))return;
-  if(e.key==='Enter')e.target.blur();
-  else if(e.key==='Escape'){editingId=null;render();}
+$('#list').addEventListener('input',e=>{
+  if(e.target.classList.contains('editin')&&editDraft)editDraft.title=e.target.value;
+  if(e.target.classList.contains('editdate')&&editDraft)editDraft.due=e.target.value||null;
 });
-$('#list').addEventListener('focusout',e=>{
-  if(!e.target.classList.contains('editin'))return;
-  renameTask(e.target.dataset.i,e.target.value);
+$('#list').addEventListener('keydown',e=>{
+  if(e.target.classList.contains('editin')){
+    if(e.key==='Enter')saveEdit(e.target.dataset.i);
+    else if(e.key==='Escape')cancelEdit();
+  }
 });
 $('#int').onclick=bump;
 $('#ledger').onclick=async e=>{
