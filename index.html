@@ -250,6 +250,7 @@ function group(name,items,mod){
 }
 
 function render(){
+  const scrollY=window.scrollY;
   const T=S.tasks;
   const doing=T.filter(t=>t.status==='doing').sort(rank);
   const open=T.filter(t=>t.status==='open');
@@ -279,6 +280,7 @@ function render(){
   if(editingId){const el=$('.editin');if(el&&document.activeElement!==el){el.focus();el.select();}}
 
   ledger();
+  if(window.scrollY!==scrollY)window.scrollTo(0,scrollY);
 }
 function startEdit(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
