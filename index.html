@@ -189,7 +189,8 @@ const rank=(a,b)=>(a.p||3)-(b.p||3)||(a.due||'9999').localeCompare(b.due||'9999'
 
 function add(){
   const v=$('#title').value.trim();if(!v)return;
-  S.tasks.push({id:Date.now()+''+Math.random(),title:v,due:pDue,p:pPri,status:'open',created:Date.now()});
+  const now=Date.now();
+  S.tasks.push({id:now+''+Math.random(),title:v,due:pDue,p:pPri,status:'open',created:now,updated:now});
   $('#title').value='';$('#date').value='';pDue=null;
   document.querySelectorAll('.chip[data-off]').forEach(c=>c.classList.remove('on'));
   save();render();$('#title').focus();
@@ -197,12 +198,12 @@ function add(){
 function act(id,how){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
   if(how==='del')S.tasks=S.tasks.filter(x=>x.id!==id);
-  else if(how==='done'){t.status='done';t.doneAt=Date.now()}
-  else if(how==='open'){t.status='open';delete t.doneAt}
-  else if(how==='start')t.status='doing';
-  else if(how==='park')t.status='open';
-  else if(how==='hold')t.status=t.status==='waiting'?'open':'waiting';
-  else if(how==='push')t.due=offISO(1);
+  else if(how==='done'){t.status='done';t.doneAt=Date.now();t.updated=Date.now()}
+  else if(how==='open'){t.status='open';delete t.doneAt;t.updated=Date.now()}
+  else if(how==='start'){t.status='doing';t.updated=Date.now()}
+  else if(how==='park'){t.status='open';t.updated=Date.now()}
+  else if(how==='hold'){t.status=t.status==='waiting'?'open':'waiting';t.updated=Date.now()}
+  else if(how==='push'){t.due=offISO(1);t.updated=Date.now()}
   save();render();
 }
 function bump(){S.interrupts.push(Date.now());save();render()}
@@ -261,12 +262,17 @@ function render(){
   const hold=T.filter(t=>t.status==='waiting').sort(rank);
   const done=T.filter(t=>t.status==='done').sort((a,b)=>b.doneAt-a.doneAt).slice(0,8);
 
-  const queue=[...doing,...late,...now,...week,...later];
-  const next=queue.find(t=>t.due);
-  $('#bitewrap').innerHTML=next
-    ?'<div class="bite '+(isLate(next)?'late':'')+'"><div class="eyebrow">'+(isLate(next)?'This one is already burning':'Next thing that will bite you')
-      +'</div><div class="what">'+esc(next.title)+'</div><div class="biterow"><span class="tick">'+left(next.due).txt.toUpperCase()
-      +'</span><span class="when">P'+(next.p||3)+' &middot; '+fmt(next.due)+'</span></div></div>':'';
+  const latest=T.filter(t=>t.status!=='done').sort((a,b)=>(b.updated||b.created||0)-(a.updated||a.created||0))[0];
+  if(latest){
+    const overdue=latest.due&&isLate(latest);
+    const Lx=latest.due?left(latest.due):null;
+    const p=latest.p||3;
+    $('#bitewrap').innerHTML='<div class="bite" style="border-left-color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'"><div class="eyebrow">'+(overdue?'This one is already burning':'Latest update')
+      +'</div><div class="what">'+esc(latest.title)+'</div><div class="biterow"><span class="tick" style="color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'">'+(Lx?Lx.txt.toUpperCase():'NO DATE SET')
+      +'</span><span class="when">P'+p+(latest.due?' &middot; '+fmt(latest.due):'')+'</span></div></div>';
+  }else{
+    $('#bitewrap').innerHTML='';
+  }
 
   $('#wipnote').textContent=doing.length?doing.length+' in progress now.':'';
 
@@ -292,6 +298,7 @@ function saveEdit(id){
   if(v)t.title=v;
   t.p=editDraft.p;
   t.due=editDraft.due||null;
+  t.updated=Date.now();
   editingId=null;editDraft=null;save();render();
 }
 function cancelEdit(){editingId=null;editDraft=null;render();}
