@@ -58,17 +58,17 @@
   .group.danger .ghead{color:var(--p1)}
   .group.live .ghead{color:var(--clear)}
 
-  .row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-top:7px;background:var(--board);border-radius:9px;border-left:3px solid transparent;flex-wrap:wrap}
+  .row{display:flex;align-items:center;gap:11px;padding:11px 12px;margin-top:7px;background:var(--board);border-radius:9px;border-left:4px solid transparent;flex-wrap:wrap}
   .row.late{border-left-color:var(--p1);background:#231628}
   .row.now{border-left-color:var(--p2)}
   .row.doing{border-left-color:var(--clear);background:#132A2B}
   .row.hold{opacity:.7;border-left-color:var(--dim)}
   .row.gone{opacity:.42;background:transparent}
-  .p{font-family:var(--disp);font-weight:700;font-size:12px;letter-spacing:.06em;border:1px solid;border-radius:4px;padding:2px 5px;flex-shrink:0}
-  .p1{color:var(--p1);border-color:var(--p1)}
-  .p2{color:var(--p2);border-color:var(--p2)}
-  .p3{color:var(--p3);border-color:var(--p3)}
-  .p4{color:var(--p4);border-color:var(--p4)}
+  .p{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.06em;border-radius:5px;padding:3px 7px;flex-shrink:0}
+  .p1{color:#fff;background:var(--p1)}
+  .p2{color:var(--ink);background:var(--p2)}
+  .p3{color:#fff;background:var(--p3)}
+  .p4{color:var(--chalk);background:var(--line)}
   .t{flex:1 1 160px;min-width:160px;font-size:14.5px;line-height:1.35;word-break:break-word;cursor:text;border-radius:5px;padding:2px 4px;margin:-2px -4px}
   .t:hover{background:rgba(255,255,255,.05)}
   .row.gone .t{text-decoration:line-through;cursor:default}
@@ -240,7 +240,7 @@ function row(t){
      +'<textarea class="notesin editnotes" data-i="'+t.id+'" placeholder="Optional details — one point per line">'+esc(d.desc||'')+'</textarea>'
      +'</div>';
   }
-  return '<div class="row '+cls+'">'
+  return '<div class="row '+cls+'" data-p="'+p+'">'
    +'<span class="p p'+p+'">P'+p+'</span>'
    +'<span class="t" data-i="'+t.id+'" title="Click to edit">'+esc(t.title)+'</span>'
    +'<span class="cd">'+(t.status==='done'?'cleared':t.status==='waiting'?'on hold':L?L.txt:'no date')+'</span>'
