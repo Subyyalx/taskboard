@@ -33,6 +33,9 @@
   .add input[type=text]{flex:1 1 220px;min-width:0;background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:11px 12px;border-radius:8px;font:inherit;font-size:14px}
   .add input[type=date]{background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:9px 10px;border-radius:8px;font:inherit;font-size:13px;color-scheme:dark}
   .add input::placeholder{color:var(--dim)}
+  .notesin{width:100%;min-height:60px;background:var(--board-2);border:1px solid var(--line);color:var(--chalk);padding:9px 11px;border-radius:8px;font:inherit;font-size:13px;resize:vertical}
+  .notesin::placeholder{color:var(--dim)}
+  .row.editing .notesin{flex:1 1 100%;min-height:56px;margin-top:2px}
   .chip{background:transparent;border:1px solid var(--line);color:var(--dim);padding:8px 11px;border-radius:20px;font:inherit;font-size:12px;cursor:pointer}
   .chip:hover{border-color:var(--chalk);color:var(--chalk)}
   .chip.on{border-color:var(--p2);color:var(--p2)}
@@ -81,6 +84,9 @@
   .mini{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:6px;padding:5px 8px;font:inherit;font-size:11px;cursor:pointer;line-height:1.2}
   .mini:hover{border-color:var(--chalk);color:var(--chalk)}
   .mini.ok:hover{border-color:var(--clear);color:var(--clear)}
+  .desc{flex-basis:100%;margin:2px 0 0;padding-left:18px;font-size:12px;line-height:1.5;color:var(--dim)}
+  .desc li{margin:1px 0}
+  .row.gone .desc{text-decoration:line-through}
 
   .empty{margin-top:10px;padding:26px 18px;border:1px dashed var(--line);border-radius:10px;text-align:center;color:var(--dim);font-size:13.5px}
 
@@ -126,7 +132,9 @@
     <button class="chip" data-off="0">Today</button>
     <button class="chip" data-off="1">Tomorrow</button>
     <input type="date" id="date">
+    <button class="chip" id="notestoggle" type="button">+ Notes</button>
     <button class="go" id="go">Add</button>
+    <textarea id="notes" class="notesin" placeholder="Optional details — one point per line" style="display:none"></textarea>
   </div>
   <div class="wipnote" id="wipnote"></div>
 
@@ -144,7 +152,7 @@
 <script>
 const KEY='taskboard:v2';
 let S={tasks:[],interrupts:[],lastOpen:null};
-let pDue=null, pPri=3, showDone=false, editingId=null, editDraft=null;
+let pDue=null, pPri=3, pNotes='', showDone=false, editingId=null, editDraft=null;
 const WEEK=7*864e5;
 
 const $=s=>document.querySelector(s);
@@ -156,6 +164,7 @@ const dl=s=>new Date(s+'T23:59:59');
 const fmt=s=>dl(s).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const isLate=t=>t.due&&dl(t.due)<new Date();
+const bullets=s=>(s||'').split('\n').map(x=>x.trim()).filter(Boolean);
 
 async function load(){
   try{
@@ -190,8 +199,9 @@ const rank=(a,b)=>(a.p||3)-(b.p||3)||(a.due||'9999').localeCompare(b.due||'9999'
 function add(){
   const v=$('#title').value.trim();if(!v)return;
   const now=Date.now();
-  S.tasks.push({id:now+''+Math.random(),title:v,due:pDue,p:pPri,status:'open',created:now,updated:now});
+  S.tasks.push({id:now+''+Math.random(),title:v,due:pDue,p:pPri,status:'open',created:now,updated:now,description:pNotes.trim()||null});
   $('#title').value='';$('#date').value='';pDue=null;
+  pNotes='';$('#notes').value='';$('#notes').style.display='none';
   document.querySelectorAll('.chip[data-off]').forEach(c=>c.classList.remove('on'));
   save();render();$('#title').focus();
 }
@@ -225,6 +235,7 @@ function row(t){
        +'<button class="go" data-a="savedit" data-i="'+t.id+'">Save</button>'
        +'<button class="mini" data-a="canceledit" data-i="'+t.id+'">Cancel</button>'
      +'</span>'
+     +'<textarea class="notesin editnotes" data-i="'+t.id+'" placeholder="Optional details — one point per line">'+esc(d.desc||'')+'</textarea>'
      +'</div>';
   }
   return '<div class="row '+cls+'">'
@@ -243,6 +254,7 @@ function row(t){
    +'<button class="mini" data-a="del" data-i="'+t.id+'">&#10005;</button>'
    +'</span>'
    +(t.due&&t.status!=='done'?'<span class="when" style="flex-basis:100%;font-size:11px">'+fmt(t.due)+'</span>':'')
+   +(bullets(t.description).length?'<ul class="desc">'+bullets(t.description).map(l=>'<li>'+esc(l)+'</li>').join('')+'</ul>':'')
    +'</div>';
 }
 function group(name,items,mod){
@@ -262,14 +274,17 @@ function render(){
   const hold=T.filter(t=>t.status==='waiting').sort(rank);
   const done=T.filter(t=>t.status==='done').sort((a,b)=>b.doneAt-a.doneAt).slice(0,8);
 
-  const latest=T.filter(t=>t.status!=='done').sort((a,b)=>(b.updated||b.created||0)-(a.updated||a.created||0))[0];
-  if(latest){
-    const overdue=latest.due&&isLate(latest);
-    const Lx=latest.due?left(latest.due):null;
-    const p=latest.p||3;
-    $('#bitewrap').innerHTML='<div class="bite" style="border-left-color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'"><div class="eyebrow">'+(overdue?'This one is already burning':'Latest update')
-      +'</div><div class="what">'+esc(latest.title)+'</div><div class="biterow"><span class="tick" style="color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'">'+(Lx?Lx.txt.toUpperCase():'NO DATE SET')
-      +'</span><span class="when">P'+p+(latest.due?' &middot; '+fmt(latest.due):'')+'</span></div></div>';
+  const withDue=T.filter(t=>t.status!=='done'&&t.due);
+  const overdueList=withDue.filter(isLate).sort(rank);
+  const upcoming=withDue.filter(t=>!isLate(t)).sort((a,b)=>a.due.localeCompare(b.due)||(a.p||3)-(b.p||3));
+  const near=overdueList[0]||upcoming[0];
+  if(near){
+    const overdue=isLate(near);
+    const Lx=left(near.due);
+    const p=near.p||3;
+    $('#bitewrap').innerHTML='<div class="bite" style="border-left-color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'"><div class="eyebrow">'+(overdue?'This one is already burning':'Nearest to done')
+      +'</div><div class="what">'+esc(near.title)+'</div><div class="biterow"><span class="tick" style="color:'+(overdue?'var(--p1)':'var(--p'+p+')')+'">'+Lx.txt.toUpperCase()
+      +'</span><span class="when">P'+p+' &middot; '+fmt(near.due)+'</span></div></div>';
   }else{
     $('#bitewrap').innerHTML='';
   }
@@ -290,7 +305,7 @@ function render(){
 }
 function startEdit(id){
   const t=S.tasks.find(x=>x.id===id);if(!t)return;
-  editingId=id;editDraft={title:t.title,p:t.p||3,due:t.due||null};render();
+  editingId=id;editDraft={title:t.title,p:t.p||3,due:t.due||null,desc:t.description||''};render();
 }
 function saveEdit(id){
   const t=S.tasks.find(x=>x.id===id);if(!t||!editDraft)return;
@@ -298,6 +313,7 @@ function saveEdit(id){
   if(v)t.title=v;
   t.p=editDraft.p;
   t.due=editDraft.due||null;
+  t.description=(editDraft.desc||'').trim()||null;
   t.updated=Date.now();
   editingId=null;editDraft=null;save();render();
 }
@@ -336,11 +352,17 @@ function ledgerText(){
    +'Still past due: '+s.overdue.length+'\n';
   if(s.clearedList.length){
     out+='\nCleared this week:\n';
-    s.clearedList.forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+'\n'});
+    s.clearedList.forEach(t=>{
+      out+='- [P'+(t.p||3)+'] '+t.title+'\n';
+      bullets(t.description).forEach(b=>{out+='    - '+b+'\n'});
+    });
   }
   if(s.overdue.length){
     out+='\nStill open, past due:\n';
-    s.overdue.forEach(t=>{out+='- [P'+(t.p||3)+'] '+t.title+' (due '+t.due+')\n'});
+    s.overdue.forEach(t=>{
+      out+='- [P'+(t.p||3)+'] '+t.title+' (due '+t.due+')\n';
+      bullets(t.description).forEach(b=>{out+='    - '+b+'\n'});
+    });
   }
   return out;
 }
@@ -373,9 +395,15 @@ $('#list').onclick=e=>{
   const cn=e.target.closest('[data-a="canceledit"]');if(cn){cancelEdit();return}
   const b=e.target.closest('.mini');if(b)act(b.dataset.i,b.dataset.a);
 };
+$('#notestoggle').onclick=()=>{
+  const ta=$('#notes');const show=ta.style.display==='none';
+  ta.style.display=show?'block':'none';if(show)ta.focus();
+};
+$('#notes').addEventListener('input',e=>{pNotes=e.target.value});
 $('#list').addEventListener('input',e=>{
   if(e.target.classList.contains('editin')&&editDraft)editDraft.title=e.target.value;
   if(e.target.classList.contains('editdate')&&editDraft)editDraft.due=e.target.value||null;
+  if(e.target.classList.contains('editnotes')&&editDraft)editDraft.desc=e.target.value;
 });
 $('#list').addEventListener('keydown',e=>{
   if(e.target.classList.contains('editin')){
